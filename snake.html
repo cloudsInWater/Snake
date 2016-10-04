@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		*{margin:0;padding:0;}
+		#container{
+			width:600px;
+			height:600px;
+			border:1px solid black;
+			position:absolute;
+			left:0;
+			right:0;
+			top:0;
+			bottom:0;
+			margin:auto;
+			font-size:0;
+		}
+		span{
+			width:50px;
+			height:50px;
+			display:inline-block;
+			border:1px solid black;
+			box-sizing:border-box;
+		}
+		span.snake{
+			background-color:blue;
+			position:absolute;
+			top:0;
+		}
+		span.food{
+			position:absolute;
+			background-color:orange;
+		}
+	</style>
+	<script>
+	//枚举(让你的代码更具可读性和可维护性)
+		var DIR={
+			DIR_LEFT:1,
+			DIR_RIGHT:2,
+			DIR_TOP:3,
+			DIR_BOTTOM:4
+		};
+		var square={width:50,height:50};
+		var Map={
+			show:function(){
+				//算出水平和垂直各需摆入多少个span
+				var div=document.getElementById('container');
+				var width=div.offsetWidth-2;
+				var height=div.offsetHeight-2;
+				var hMax=width/square.width;
+				var vMax=height/square.height;
+				//for循环创建span并加到container容器中
+				for(var i=1;i<=hMax*vMax;i++){
+					var newSpan=document.createElement('span');
+					div.appendChild(newSpan);
+				}
+			}
+		};
+		var Snake={
+			handler:null,
+			speed:1000,
+			dirc:DIR.DIR_RIGHT,
+			bodys:[],
+			isValidPosition:function(left,top){
+				for(var i=0;i<this.bodys.length;i++){
+					if(this.bodys[i].offsetTop==top&&
+						this.bodys[i].offsetLeft==left){
+						return false;
+					}
+				}
+				return true;
+			},
+			moveOrNot:function(left,top){
+				if(!this.isValidPosition(left,top)){
+					return false;
+				}
+				var container=document
+					.getElementById('container');
+				if(left<0||top<0
+					||left>=container.offsetWidth-2
+					||top>=container.offsetHeight-2){
+					return false;
+				}
+				return true;
+			},
+			addBody:function(left,top){
+				var newBody=document.createElement('span');
+				newBody.className='snake';
+				newBody.style.top=top+'px';
+				newBody.style.left=left+'px';
+				document.getElementById('container')
+					.appendChild(newBody);
+				this.bodys.push(newBody);
+			},
+			//初始化显示
+			init:function(length){
+				var container=document.
+						getElementById('container');
+				for(var i=0;i<length;i++){
+					var span=document.createElement('span');
+					span.className="snake";
+					span.style.left=i*square.width+'px';
+					container.appendChild(span);
+					this.bodys.unshift(span);
+				}
+				//绑定方向控制
+				document.onkeydown=function(e){
+					switch(e.keyCode){
+						case 37:
+							Snake.dirc=DIR.DIR_LEFT;
+							break;
+						case 38:
+							Snake.dirc=DIR.DIR_TOP;
+							break;
+						case 39:
+							Snake.dirc=DIR.DIR_RIGHT;
+							break;
+						case 40:
+							Snake.dirc=DIR.DIR_BOTTOM;
+							break;
+						default:break;
+					}
+				};
+			},
+			//移动
+			move:function(){
+				var rearLeft=this.bodys[this.bodys.length-1].offsetLeft;
+				var rearTop=this.bodys[this.bodys.length-1].offsetTop;
+				//让除了蛇头以外的元素移动
+				for(var i=this.bodys.length-1;i>=1;i--){
+					this.bodys[i].style.top=
+						this.bodys[i-1].offsetTop+'px';
+					this.bodys[i].style.left=
+						this.bodys[i-1].offsetLeft+'px';
+				}
+				var newLeft=this.bodys[0].offsetLeft;
+				var newTop=this.bodys[0].offsetTop;
+				//让蛇头移动
+				switch(this.dirc){
+					case DIR.DIR_LEFT:
+						newLeft-=square.width;
+						break;
+					case DIR.DIR_RIGHT:
+						newLeft+=square.width;
+						break;
+					case DIR.DIR_TOP:
+						newTop-=square.height;
+						break;
+					case DIR.DIR_BOTTOM:
+						newTop+=square.height;
+						break;
+					default:break;
+				}
+				//判断蛇头新的位置是不是有效的
+				if(!this.moveOrNot(newLeft,newTop)){
+					alert('Game Over!');
+					return;
+				}
+				this.bodys[0].style.left=newLeft+'px';
+				this.bodys[0].style.top=newTop+'px';
+				//如果能吃到食物
+				if(newLeft==Food.food.offsetLeft&&
+					newTop==Food.food.offsetTop){
+					this.addBody(rearLeft,rearTop);
+					//食物要重置
+					Food.reset();
+					clearInterval(this.handler);
+					this.speed=this.speed-100>100?this.speed-100:100;
+					this.handler=setInterval(function(){
+						Snake.move();
+					},this.speed);
+
+				}
+			}
+		};
+		var Food={
+			food:null,
+			reset:function(){
+				document.getElementById('container').removeChild(this.food);
+				this.food=null;
+				this.show();
+			},
+			show:function(){
+				var container=document.getElementById('container');
+				this.food=document.createElement('span');
+				this.food.className='food';
+				//设置一下食物span的top和left
+				var width=container.offsetWidth-2;
+				var height=container.offsetHeight-2;
+				var vMax=height/square.height;
+				var hMax=width/square.width;
+				do{
+					var top=Math.floor(Math.random()*vMax)*square.height;
+					var left=Math.floor(Math.random()*hMax)*square.width;
+				}while(!Snake.isValidPosition(left,top))
+				this.food.style.top=top+'px';
+				this.food.style.left=left+'px';
+				container.appendChild(this.food);
+			}
+		};
+		window.onload=function(){
+			Map.show();
+			Snake.init(5);
+			Snake.handler=setInterval(function(){Snake.move();},Snake.speed);
+			Food.show();
+		};
+	</script>
+</head>
+<body>
+	<div id='container'></div>
+</body>
+</html>
